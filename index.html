@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מנתח שיחות AI | Chat Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: rgba(255, 255, 255, 0.03);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --accent-cyan: #00d4ff;
+            --accent-purple: #a855f7;
+            --accent-pink: #ec4899;
+            --accent-green: #10b981;
+            --gradient-main: linear-gradient(135deg, #00d4ff 0%, #a855f7 50%, #ec4899 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Heebo', 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Animated background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 30%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 70%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.05) 0%, transparent 50%);
+            animation: bgFloat 20s ease-in-out infinite;
+        }
+
+        @keyframes bgFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(2%, 2%) rotate(1deg); }
+            66% { transform: translate(-2%, 1%) rotate(-1deg); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 50px 20px 40px;
+            position: relative;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .logo-icon {
+            width: 60px;
+            height: 60px;
+            background: var(--gradient-main);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            box-shadow: 0 10px 40px rgba(0, 212, 255, 0.3);
+        }
+
+        h1 {
+            font-family: 'Rubik', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            background: var(--gradient-main);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -1px;
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1.15rem;
+            max-width: 600px;
+            margin: 0 auto;
+            font-weight: 300;
+        }
+
+        /* API Key Setup */
+        .api-setup {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .api-setup.hidden {
+            display: none;
+        }
+
+        .api-setup h3 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .api-input-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .api-input-group input {
+            flex: 1;
+            min-width: 250px;
+            padding: 14px 18px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-family: 'Consolas', monospace;
+            transition: all 0.3s ease;
+        }
+
+        .api-input-group input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+        }
+
+        .api-input-group input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .api-status.connected {
+            color: var(--accent-green);
+        }
+
+        .api-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+        }
+
+        .api-status.connected .api-status-dot {
+            background: var(--accent-green);
+            box-shadow: 0 0 10px var(--accent-green);
+        }
+
+        .api-info {
+            margin-top: 15px;
+            padding: 12px 15px;
+            background: rgba(168, 85, 247, 0.1);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .api-info a {
+            color: var(--accent-purple);
+            text-decoration: none;
+        }
+
+        .api-info a:hover {
+            text-decoration: underline;
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 1000px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Panels */
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 28px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .panel:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .panel-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .panel-title .icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient-main);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        /* Textarea */
+        .textarea-wrapper {
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            height: 380px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px;
+            color: var(--text-primary);
+            font-family: 'Heebo', sans-serif;
+            font-size: 0.95rem;
+            resize: vertical;
+            transition: all 0.3s ease;
+            line-height: 1.7;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.15);
+        }
+
+        textarea::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 140px;
+            padding: 16px 24px;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Heebo', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: var(--gradient-main);
+            color: #000;
+            box-shadow: 0 5px 25px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Sample Buttons */
+        .samples {
+            margin-top: 20px;
+        }
+
+        .samples-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .samples-grid {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .sample-btn {
+            padding: 10px 16px;
+            background: rgba(168, 85, 247, 0.15);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Heebo', sans-serif;
+        }
+
+        .sample-btn:hover {
+            background: rgba(168, 85, 247, 0.25);
+            border-color: rgba(168, 85, 247, 0.5);
+            transform: translateY(-1px);
+        }
+
+        /* Results */
+        .results-container {
+            min-height: 500px;
+        }
+
+        .placeholder {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 60px 30px;
+            color: var(--text-secondary);
+        }
+
+        .placeholder-icon {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .placeholder-text {
+            font-size: 1.1rem;
+            max-width: 300px;
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 80px 30px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .loader {
+            width: 70px;
+            height: 70px;
+            position: relative;
+            margin: 0 auto 30px;
+        }
+
+        .loader::before,
+        .loader::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+        }
+
+        .loader::before {
+            width: 100%;
+            height: 100%;
+            border: 3px solid transparent;
+            border-top-color: var(--accent-cyan);
+            border-right-color: var(--accent-purple);
+            animation: spin 1s linear infinite;
+        }
+
+        .loader::after {
+            width: 60%;
+            height: 60%;
+            top: 20%;
+            left: 20%;
+            border: 3px solid transparent;
+            border-bottom-color: var(--accent-pink);
+            border-left-color: var(--accent-cyan);
+            animation: spin 0.8s linear infinite reverse;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.2rem;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .loading-step {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            padding: 18px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: var(--gradient-main);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Result Sections */
+        .results {
+            display: none;
+        }
+
+        .results.active {
+            display: block;
+            animation: fadeUp 0.5s ease;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-section {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 22px;
+            margin-bottom: 20px;
+            border-right: 4px solid;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .result-section:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .result-section.summary {
+            border-color: var(--accent-cyan);
+        }
+
+        .result-section.opinions {
+            border-color: var(--accent-purple);
+        }
+
+        .result-section.ai-opinion {
+            border-color: var(--accent-pink);
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .result-header .icon {
+            font-size: 1.3rem;
+        }
+
+        .result-content {
+            color: var(--text-secondary);
+            line-height: 1.9;
+            font-size: 0.95rem;
+        }
+
+        .result-content strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            cursor: pointer;
+            opacity: 0;
+            transition: all 0.3s ease;
+            font-family: 'Heebo', sans-serif;
+        }
+
+        .result-section:hover .copy-btn {
+            opacity: 1;
+        }
+
+        .copy-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        /* Error */
+        .error-msg {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 10px;
+            padding: 15px 18px;
+            margin-bottom: 20px;
+            display: none;
+            color: #fca5a5;
+            font-size: 0.9rem;
+        }
+
+        .error-msg.active {
+            display: block;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        footer a {
+            color: var(--accent-cyan);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Mobile */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .panel {
+                padding: 20px;
+            }
+
+            textarea {
+                height: 300px;
+            }
+
+            .stats-bar {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+    
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">💬</div>
+            </div>
+            <h1>מנתח שיחות AI</h1>
+            <p class="tagline">העלה שיחה מוואטסאפ או כל מקור אחר וקבל ניתוח מעמיק עם בינה מלאכותית</p>
+        </header>
+
+        <!-- API Key Setup -->
+        <div class="api-setup" id="api-setup">
+            <h3>🔑 הגדרת API Key</h3>
+            <div class="api-input-group">
+                <input type="password" id="api-key-input" placeholder="הכנס את ה-Anthropic API Key שלך...">
+                <button class="btn btn-primary" onclick="saveApiKey()" style="flex: 0; min-width: auto; padding: 14px 25px;">
+                    שמור
+                </button>
+            </div>
+            <div class="api-status" id="api-status">
+                <span class="api-status-dot"></span>
+                <span>לא מחובר</span>
+            </div>
+            <div class="api-info">
+                🔑 יש לך כבר חשבון? <a href="https://console.anthropic.com/settings/keys" target="_blank">לחץ כאן לקבלת ה-API Key שלך</a>
+                <br><br>
+                💡 אין לך API Key? <a href="https://console.anthropic.com/" target="_blank">צור חשבון ב-Anthropic</a> וקבל מפתח בחינם.
+                המפתח נשמר רק בדפדפן שלך ולא נשלח לשום מקום אחר.
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <!-- Input Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <span class="icon">📝</span>
+                        הדבק את השיחה
+                    </h2>
+                </div>
+
+                <div class="textarea-wrapper">
+                    <textarea id="chat-input" placeholder="הדבק כאן את השיחה...
+
+פורמט וואטסאפ:
+[28.1.2025, 10:30] יוסי: מה דעתכם?
+[28.1.2025, 10:31] דני: אני חושב ש...
+
+או פורמט פשוט:
+יוסי: בלה בלה
+דני: בלה בלה"></textarea>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="analyze-btn" onclick="analyzeChat()">
+                        🚀 נתח את השיחה
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearAll()">
+                        🗑️ נקה
+                    </button>
+                </div>
+
+                <div class="samples">
+                    <div class="samples-label">💡 שיחות לדוגמה:</div>
+                    <div class="samples-grid">
+                        <button class="sample-btn" onclick="loadSample('politics')">🗳️ פוליטיקה</button>
+                        <button class="sample-btn" onclick="loadSample('tech')">💻 טכנולוגיה</button>
+                        <button class="sample-btn" onclick="loadSample('sports')">⚽ ספורט</button>
+                        <button class="sample-btn" onclick="loadSample('family')">👨‍👩‍👧 משפחה</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <span class="icon">📊</span>
+                        תוצאות הניתוח
+                    </h2>
+                </div>
+
+                <div class="results-container">
+                    <div class="error-msg" id="error-msg"></div>
+
+                    <div class="loading" id="loading">
+                        <div class="loader"></div>
+                        <div class="loading-text">מנתח את השיחה...</div>
+                        <div class="loading-step" id="loading-step">קורא את ההודעות...</div>
+                    </div>
+
+                    <div class="results" id="results">
+                        <div class="stats-bar">
+                            <div class="stat-card">
+                                <div class="stat-value" id="msg-count">0</div>
+                                <div class="stat-label">הודעות</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="participant-count">0</div>
+                                <div class="stat-label">משתתפים</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="word-count">0</div>
+                                <div class="stat-label">מילים</div>
+                            </div>
+                        </div>
+
+                        <div class="result-section summary">
+                            <button class="copy-btn" onclick="copySection('summary-content')">📋 העתק</button>
+                            <div class="result-header">
+                                <span class="icon">📋</span>
+                                תקציר השיחה
+                            </div>
+                            <div class="result-content" id="summary-content"></div>
+                        </div>
+
+                        <div class="result-section opinions">
+                            <button class="copy-btn" onclick="copySection('opinions-content')">📋 העתק</button>
+                            <div class="result-header">
+                                <span class="icon">👥</span>
+                                דעות המשתתפים
+                            </div>
+                            <div class="result-content" id="opinions-content"></div>
+                        </div>
+
+                        <div class="result-section ai-opinion">
+                            <button class="copy-btn" onclick="copySection('ai-opinion-content')">📋 העתק</button>
+                            <div class="result-header">
+                                <span class="icon">🤖</span>
+                                דעת ה-AI
+                            </div>
+                            <div class="result-content" id="ai-opinion-content"></div>
+                        </div>
+                    </div>
+
+                    <div class="placeholder" id="placeholder">
+                        <div class="placeholder-icon">💬</div>
+                        <div class="placeholder-text">הדבק שיחה ולחץ "נתח את השיחה" כדי לקבל ניתוח מעמיק</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            נבנה עם ❤️ ו-Claude AI | 
+            <a href="https://github.com/roysadeh520" target="_blank">GitHub</a>
+        </footer>
+    </div>
+
+    <script>
+        // Sample chats
+        const sampleChats = {
+            politics: `[28.1.2025, 09:15] אבי: ראיתם את ההחלטה החדשה של הממשלה?
+[28.1.2025, 09:16] דנה: כן, אני חושבת שזה צעד חיובי. סוף סוף עושים משהו
+[28.1.2025, 09:17] יוסי: לא מסכים בכלל. זה רק יפגע במעמד הביניים
+[28.1.2025, 09:18] מיכל: צריך לחכות ולראות את התוצאות בפועל
+[28.1.2025, 09:19] אבי: יוסי, למה אתה תמיד כל כך שלילי?
+[28.1.2025, 09:20] יוסי: אני לא שלילי, אני ריאליסט. תסתכל על הנתונים
+[28.1.2025, 09:21] דנה: הנתונים מראים שהרפורמה הקודמת עבדה
+[28.1.2025, 09:22] מיכל: יש טיעונים טובים לשני הצדדים. אני מעדיפה לא לקפוץ למסקנות
+[28.1.2025, 09:23] יוסי: דנה, איזה נתונים? תראי לי מקור
+[28.1.2025, 09:24] דנה: קראתי את זה בכלכליסט שלשום
+[28.1.2025, 09:25] אבי: בכל מקרה, אני תומך בזה. צריך לתת צ'אנס`,
+            
+            tech: `[28.1.2025, 14:00] רון: מה דעתכם על Claude לעומת ChatGPT?
+[28.1.2025, 14:01] שירה: Claude יותר טוב בכתיבה והבנה, לדעתי
+[28.1.2025, 14:02] עומר: ChatGPT יש לו יותר פיצ'רים כמו תמונות וכו'
+[28.1.2025, 14:03] רון: אני משתמש בשניהם, תלוי במשימה
+[28.1.2025, 14:04] נועה: Claude נראה לי יותר "אנושי" בתשובות
+[28.1.2025, 14:05] שירה: בדיוק! וגם יותר זהיר עם מידע לא נכון
+[28.1.2025, 14:06] עומר: אבל לפעמים הוא מסרב לדברים בלי סיבה
+[28.1.2025, 14:07] רון: נכון, יש לו יותר מגבלות
+[28.1.2025, 14:08] נועה: אני מעדיפה AI שמסרב מאשר אחד שממציא דברים
+[28.1.2025, 14:09] עומר: פוינט. בסוף שניהם מדהימים
+[28.1.2025, 14:10] שירה: מסכימה, העתיד פה 🚀`,
+            
+            sports: `[28.1.2025, 21:30] גיל: איזה משחק היה הערב!
+[28.1.2025, 21:31] תומר: ליברפול שולטים העונה, אין מה לעשות
+[28.1.2025, 21:32] אור: סאלח פשוט חייזר. הגול השני שלו היה מטורף
+[28.1.2025, 21:33] מאור: צ'לסי היו צריכים לנצח, פספסו המון הזדמנויות
+[28.1.2025, 21:34] גיל: מאור, אתה תמיד מוצא תירוצים 😂
+[28.1.2025, 21:35] תומר: האמת שהשופט היה נגדם קצת
+[28.1.2025, 21:36] אור: בואו, ליברפול היו פשוט יותר טובים
+[28.1.2025, 21:37] מאור: אוקיי נכון, אבל הפער לא כזה גדול כמו שהתוצאה מראה
+[28.1.2025, 21:38] גיל: סלוט עושה עבודה מטורפת. מי היה מאמין אחרי קלופ?
+[28.1.2025, 21:39] תומר: השנה זה שלהם, לא רואה מי יעצור אותם
+[28.1.2025, 21:40] אור: ארסנל עדיין בתמונה!`,
+
+            family: `[28.1.2025, 18:00] אמא: ילדים, מה עושים בשבת?
+[28.1.2025, 18:01] יעל: אני חושבת שכדאי ללכת לים, מזג האוויר מושלם
+[28.1.2025, 18:02] דני: ים? בינואר? את רצינית?
+[28.1.2025, 18:03] אבא: אני מצביע לטיול בצפון. יש פריחה עכשיו
+[28.1.2025, 18:04] יעל: אבא, נסענו לצפון לפני שבועיים...
+[28.1.2025, 18:05] אמא: אולי סתם ארוחה משפחתית בבית?
+[28.1.2025, 18:06] דני: +1 לאמא. עייפים מטיולים
+[28.1.2025, 18:07] יעל: משעמם! אנחנו תמיד בבית
+[28.1.2025, 18:08] אבא: יעל, לפעמים טוב להיות ביחד בלי לרוץ
+[28.1.2025, 18:09] אמא: בדיוק. אני אכין את הלזניה המיוחדת שלי
+[28.1.2025, 18:10] יעל: אוקיי אם יש לזניה אני בעד 😋
+[28.1.2025, 18:11] דני: הא! ידעתי שהלזניה תשכנע אותה`
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedKey = localStorage.getItem('anthropic_api_key');
+            if (savedKey) {
+                document.getElementById('api-key-input').value = savedKey;
+                updateApiStatus(true);
+            }
+        });
+
+        function saveApiKey() {
+            const key = document.getElementById('api-key-input').value.trim();
+            if (key) {
+                localStorage.setItem('anthropic_api_key', key);
+                updateApiStatus(true);
+            }
+        }
+
+        function updateApiStatus(connected) {
+            const status = document.getElementById('api-status');
+            if (connected) {
+                status.classList.add('connected');
+                status.innerHTML = '<span class="api-status-dot"></span><span>מחובר ✓</span>';
+            } else {
+                status.classList.remove('connected');
+                status.innerHTML = '<span class="api-status-dot"></span><span>לא מחובר</span>';
+            }
+        }
+
+        function loadSample(type) {
+            document.getElementById('chat-input').value = sampleChats[type];
+        }
+
+        function clearAll() {
+            document.getElementById('chat-input').value = '';
+            document.getElementById('results').classList.remove('active');
+            document.getElementById('placeholder').style.display = 'flex';
+            document.getElementById('error-msg').classList.remove('active');
+        }
+
+        function showError(message) {
+            const el = document.getElementById('error-msg');
+            el.textContent = '❌ ' + message;
+            el.classList.add('active');
+        }
+
+        function hideError() {
+            document.getElementById('error-msg').classList.remove('active');
+        }
+
+        function setLoading(isLoading, step = '') {
+            const loading = document.getElementById('loading');
+            const placeholder = document.getElementById('placeholder');
+            const results = document.getElementById('results');
+            const btn = document.getElementById('analyze-btn');
+
+            if (isLoading) {
+                loading.classList.add('active');
+                placeholder.style.display = 'none';
+                results.classList.remove('active');
+                btn.disabled = true;
+                if (step) document.getElementById('loading-step').textContent = step;
+            } else {
+                loading.classList.remove('active');
+                btn.disabled = false;
+            }
+        }
+
+        function parseChat(text) {
+            const lines = text.trim().split('\n').filter(l => l.trim());
+            const messages = [];
+            const participants = new Set();
+            
+            const patterns = [
+                /^\[[\d.\/]+,?\s*[\d:]+\]\s*([^:]+):\s*(.+)$/,
+                /^([^:]+):\s*(.+)$/,
+                /^([^,]+),\s*\[.+\]\s*(.+)$/
+            ];
+
+            for (const line of lines) {
+                for (const pattern of patterns) {
+                    const match = line.match(pattern);
+                    if (match) {
+                        const name = match[1].trim();
+                        const message = match[2].trim();
+                        if (name && message && name.length < 30) {
+                            messages.push({ name, message });
+                            participants.add(name);
+                        }
+                        break;
+                    }
+                }
+            }
+
+            return {
+                messages,
+                participants: Array.from(participants),
+                wordCount: text.split(/\s+/).length
+            };
+        }
+
+        async function analyzeChat() {
+            hideError();
+            
+            const apiKey = localStorage.getItem('anthropic_api_key');
+            if (!apiKey) {
+                showError('נא להזין API Key קודם');
+                return;
+            }
+
+            const chatText = document.getElementById('chat-input').value.trim();
+            if (!chatText) {
+                showError('נא להדביק שיחה לניתוח');
+                return;
+            }
+
+            const parsed = parseChat(chatText);
+            if (parsed.messages.length < 2) {
+                showError('לא זוהו מספיק הודעות. וודא שהפורמט נכון (שם: הודעה)');
+                return;
+            }
+
+            setLoading(true, 'מעבד את ההודעות...');
+
+            // Update stats
+            document.getElementById('msg-count').textContent = parsed.messages.length;
+            document.getElementById('participant-count').textContent = parsed.participants.length;
+            document.getElementById('word-count').textContent = parsed.wordCount;
+
+            try {
+                setLoading(true, 'שולח ל-Claude לניתוח...');
+
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 2000,
+                        messages: [{
+                            role: 'user',
+                            content: `אתה מנתח שיחות מקצועי. נתח את השיחה הבאה וספק:
+
+1. **תקציר השיחה** (3-5 משפטים): מה הנושא המרכזי? מה קרה בשיחה?
+
+2. **דעות המשתתפים**: לכל משתתף, תאר בקצרה את עמדתו/דעתו בשיחה. פורמט:
+**[שם]**: [דעתו בקצרה]
+
+3. **דעת ה-AI**: תן את דעתך על הנושא שנדון (אם אפשר), או הערות על דינמיקת השיחה, נקודות מעניינות, או תובנות. אם הנושא שנוי במחלוקת, הצג את הצדדים בצורה מאוזנת.
+
+השיחה:
+${chatText}
+
+ענה בעברית. השתמש בפורמט ברור עם כותרות.`
+                        }]
+                    })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error?.message || 'שגיאה בקריאה ל-API');
+                }
+
+                const data = await response.json();
+                const analysis = data.content[0].text;
+
+                setLoading(true, 'מעבד את התוצאות...');
+                displayResults(analysis);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError(error.message || 'שגיאה בניתוח. בדוק את ה-API Key');
+                setLoading(false);
+            }
+        }
+
+        function displayResults(analysis) {
+            let summary = '';
+            let opinions = '';
+            let aiOpinion = '';
+
+            // Parse sections
+            const parts = analysis.split(/(?=\*\*\d\.|#{1,3}|\*\*תקציר|\*\*דעות|\*\*דעת)/);
+            
+            for (const part of parts) {
+                const lower = part.toLowerCase();
+                if (lower.includes('תקציר')) {
+                    summary = part.replace(/^\*\*\d\.\s*\*\*|\*\*תקציר[^*]*\*\*:?|#{1,3}[^#\n]*:?/gi, '').trim();
+                } else if (lower.includes('דעות המשתתפים') || (lower.includes('דעות') && !lower.includes('דעת ה'))) {
+                    opinions = part.replace(/^\*\*\d\.\s*\*\*|\*\*דעות[^*]*\*\*:?|#{1,3}[^#\n]*:?/gi, '').trim();
+                } else if (lower.includes('דעת ה')) {
+                    aiOpinion = part.replace(/^\*\*\d\.\s*\*\*|\*\*דעת[^*]*\*\*:?|#{1,3}[^#\n]*:?/gi, '').trim();
+                }
+            }
+
+            // Fallback
+            if (!summary && !opinions && !aiOpinion) {
+                summary = analysis;
+            }
+
+            document.getElementById('summary-content').innerHTML = formatText(summary || 'לא נמצא תקציר');
+            document.getElementById('opinions-content').innerHTML = formatText(opinions || 'לא נמצאו דעות');
+            document.getElementById('ai-opinion-content').innerHTML = formatText(aiOpinion || 'אין דעה זמינה');
+
+            setLoading(false);
+            document.getElementById('results').classList.add('active');
+            document.getElementById('placeholder').style.display = 'none';
+        }
+
+        function formatText(text) {
+            return text
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+                .replace(/\n\n/g, '<br><br>')
+                .replace(/\n/g, '<br>');
+        }
+
+        function copySection(elementId) {
+            const el = document.getElementById(elementId);
+            navigator.clipboard.writeText(el.innerText).then(() => {
+                const btn = el.parentElement.querySelector('.copy-btn');
+                const original = btn.textContent;
+                btn.textContent = '✅ הועתק!';
+                setTimeout(() => btn.textContent = original, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
