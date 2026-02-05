@@ -213,13 +213,22 @@
         function getNextSaturdayNight() {
             const now = new Date();
             const israelTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jerusalem' }));
-            
-            const daysUntilSaturday = (6 - israelTime.getDay() + 7) % 7;
-            const nextSaturday = new Date(israelTime);
-            nextSaturday.setDate(israelTime.getDate() + (daysUntilSaturday === 0 ? 7 : daysUntilSaturday));
-            nextSaturday.setHours(23, 59, 59, 999);
-            
-            return nextSaturday;
+
+            // Calculate days until Saturday
+            let daysUntilSaturday = (6 - israelTime.getDay() + 7) % 7;
+
+            // Create target Saturday date
+            const targetSaturday = new Date(israelTime);
+            targetSaturday.setDate(israelTime.getDate() + daysUntilSaturday);
+            targetSaturday.setHours(23, 59, 59, 999);
+
+            // If it's Saturday (daysUntilSaturday is 0) but we've already passed 23:59:59,
+            // move to next Saturday
+            if (daysUntilSaturday === 0 && israelTime >= targetSaturday) {
+                targetSaturday.setDate(targetSaturday.getDate() + 7);
+            }
+
+            return targetSaturday;
         }
 
         function updateTimer() {
